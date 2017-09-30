@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" type="text/css"
+      href="https://fonts.googleapis.com/css?family=Barrio">
+<link rel="stylesheet" type="text/css"
+      href="https://fonts.googleapis.com/css?family=Rancho&effect=neon">
+<title>Unicorn Race</title>
+<style>
+canvas {
+    border:1px solid #d3d3d3;
+    background-image: url("http://66.media.tumblr.com/6f8a03861ce832a5acb55c2629b2279d/tumblr_ngj74x9GsL1toa8s4o1_500.gif");
+}
+
+#floatbtn {
+  font-size:60px;
+  margin-left: 250px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  font-family: 'Barrio', sans-serif;
+  width: 200px;
+  height: 75px;
+  background-color: transparent;
+  border: 0px;
+
+}
+.instructions-txt {
+    font-family: "Barrio", Helvetica, sans-serif;
+    margin-left: 100px;
+}
+#savebtn, #submitScore {
+  font-family: 'Barrio', sans-serif;
+  margin-left: 200px;
+  margin-top: 10px;
+  width: 300px;
+  height: 50px;
+  font-size: 30px;
+  border: 0px;
+  background-color: transparent;
+}
+}
+</style>
+</head>
+<body onload="startGame()">
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script>
+
+var unicorn;
+var lasers = [];
+var points;
+var loaded = false;
+var loadedScore = 266;
+
+//=======================  <START GAME>  ========================
+function startGame() {
+//create unicorn
+    unicorn = new component(75, 120, "http://1.bp.blogspot.com/-DxugJ-_ZNKc/WLMk-i8JO1I/AAAAAAAAVYw/PF2O98l_s_QwMXjGp1YddLa9QkpQgjVzwCK4B/s1600/unicornCropped.png", 20, 120, "image");
+    unicorn.gravity = 0.05;
+    points = new component("25px", "Barrio", "white", 280, 40, "text");
+    space.start();
+}
+
+//create space background as canvas
+var space = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.canvas.width = 700;
+        this.canvas.height = 350;
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+        this.frameNo = getFrameNo();
+        this.interval = setInterval(updateGameArea, 20);
+        },
+    clear : function() {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+}
+
+function getFrameNo(){
+  if(loaded){
+    return loadedScore;
+  } else {
+    return 0;
+  }
+}
+
+//=======================  <CONSTRUCTORS>  ========================
+//create game objects
+function component(width, height, color, x, y, type) {
+    this.type = type;
+    if (type == "image") {
+    	this.image = new Image();
+    	this.image.src = color;
+  	}
+    this.score = 0;
+    this.width = width;
+    this.height = height;
+    this.speedX = 0;
+    this.speedY = 0;
+    this.x = x;
+    this.y = y;
+    this.gravity = 0;
+    this.gravitySpeed = 0;
+
+    this.update = function() {
+        ctx = space.context;
+        if (type == "image") {
+      ctx.drawImage(this.image,
+        this.x,
+        this.y,
+        this.width, this.height);
+    } else if (this.type == "text") {
+            ctx.font = this.width + " " + this.height;
+            ctx.fillStyle = color;
+            ctx.fillText(this.text, this.x, this.y);
+        } else {
+            ctx.fillStyle = color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+    this.newPos = function() {
+        this.gravitySpeed += this.gravity;
+        this.x += this.speedX;
+        this.y += this.speedY + this.gravitySpeed;
+        this.hitBottom();
+    }
+    this.hitBottom = function() {
+        var rockbottom = space.canvas.height - this.height;
+        if (this.y > rockbottom) {
+            this.y = rockbottom;
+            this.gravitySpeed = 0;
+        }
+    }
+
+    this.hitLaser = function(laser) {
+        var myleft = this.x;
+        var myright = this.x + (this.width);
+        var mytop = this.y;
+        var mybottom = this.y + (this.height);
+        var laserleft = laser.x;
+        var laserright = laser.x + (laser.width);
+        var lasertop = laser.y;
+        var laserbottom = laser.y + (laser.height);
+        var hit = true;
+        if ((mybottom < lasertop) || (mytop > laserbottom) || (myright < laserleft) || (myleft > laserright)) {
+            hit = false;
+        }
+        return hit;
+    }
+}
+
+function updateGameArea() {
+    var canvasWidth, height, gap, minHeight, maxHeight, minGap, maxGap;
+
+    for (i = 0; i < lasers.length; i += 1) {
+        if (unicorn.hitLaser(lasers[i])) {
+          //GAME OVER
+          //points=space.frameNo;
+          return;
+        }
+    }
+    //if no hit, new frame starts (one frame has 1 top and 1 bottom laser)
+    space.clear();
+    space.frameNo += 1;
+
+    //every 150th frame add lasers
+    if (everyinterval(150)) {
+        canvasWidth = space.canvas.width;
+        //random(20, 200) height of the laser beam
+        minHeight = 20;
+        maxHeight = 200;
+        height = Math.floor(Math.random()*(maxHeight-minHeight+1)+minHeight);
+
+        // random(150, 270) gap between top and bottom lasers
+        minGap = 150;
+        maxGap = 270;
+        gap = Math.floor(Math.random()*(maxGap-minGap+1)+minGap);
+
+        //create lasers: component(width, height, color, x, y, type)
+        lasers.push(new component(3, height, "#DCA2CD", canvasWidth, 0));//lasers from top
+        lasers.push(new component(3, canvasWidth - height - gap, "#DCA2CD", canvasWidth, height + gap));//lasers from bottom
+    }
+    for (i = 0; i < lasers.length; i += 1) {
+        lasers[i].x += -1;
+        lasers[i].update();
+    }
+    //points are calculated based on frames
+    points.text="SCORE: " + space.frameNo;
+    points.update();
+    unicorn.newPos();
+    unicorn.update();
+}
+
+//if interval value can be divided by n, it is laser time
+function everyinterval(n) {
+    if ((space.frameNo / n) % 1 == 0) {
+      return true;
+    }else{
+      return false;
+    }
+  }
+
+function getPoints() {
+  //alert(space.frameNo);
+    return space.frameNo
+}
+
+//Make unicorn float
+function float(n) {
+    unicorn.gravity = n;
+}
+
+function send_score() {
+  var score = getPoints();
+  var msg = {
+    "messageType": "SCORE",
+    "score": score,
+  };
+  window.parent.postMessage(msg, "*");
+}
+
+function save_game() {
+  var state = getPoints();
+  var msg = {
+    "messageType": "SAVE",
+    "gameState": state,
+  };
+  window.parent.postMessage(msg, "*");
+}
+
+function load_game() {
+  var msg = {
+    "messageType": "LOAD_REQUEST",
+  };
+  window.parent.postMessage(msg, "*");
+}
+
+$(document).ready(function() {
+  'use strict';
+  window.addEventListener("message", function(evt) {
+    if(evt.data.messageType === "LOAD") {
+      loadedScore = evt.data.gameState;
+      loaded = true;
+      startGame();
+    } else if (evt.data.messageType === "ERROR") {
+      alert(evt.data.info);
+    }
+  });
+});
+</script>
+
+<br>
+<p class="instructions-txt">Use the FLOAT button to stay in the air. Avoid deadly laser beams!</p>
+<button class="font-effect-neon" id="floatbtn" onmousedown="float(-0.2)" onmouseup="float(0.05)">Float</button><br>
+<h1 id="gameover" hidden> Game Over <h1>
+<h2 id="score" hidden></h2>
+</body>
+</html>
